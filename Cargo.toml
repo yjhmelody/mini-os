@@ -11,6 +11,9 @@ spin = "0.4"
 version = "1.0"
 features = ["spin_no_std"]
 
+[dev-dependencies]
+array-init = "*"
+
 # This sets the panic strategy to abort for both the dev profile (used for cargo build)
 # and the release profile (used for cargo build --release).
 # Now the eh_personality language item should no longer be required.

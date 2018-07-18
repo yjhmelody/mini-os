@@ -1,7 +1,13 @@
 #![no_std]
-#![no_main]
+//#![no_main]
+#![cfg_attr(not(test), no_main)]
 #![feature(panic_implementation)]
+#![cfg_attr(test, allow(dead_code, unused_macros, unused_imports))]
 
+#[cfg(test)]
+extern crate std;
+#[cfg(test)]
+extern crate array_init;
 #[macro_use]
 extern crate lazy_static;
 extern crate volatile;
@@ -11,7 +17,6 @@ extern crate spin;
 mod vga_buffer;
 
 use core::panic::PanicInfo;
-
 
 /// The eh_personality language item is used for implementing stack unwinding.
 /// By default, Rust uses unwinding to run the destructors of all live
@@ -36,10 +41,11 @@ use core::panic::PanicInfo;
 /// the entry point, we define our own _start function:
 static HELLO: &[u8] = b"Hello World!";
 
+#[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    panic!("Some panic");
     println!("hello os {}", "!");
+    panic!("Some panic");
     loop {}
 }
 
@@ -48,28 +54,22 @@ pub extern "C" fn _start() -> ! {
 /// called mainCRTStartup, which calls a function called main.
 /// Like on Linux, we overwrite the entry points by defining
 /// no_mangle functions:
+#[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn mainCRTStartup() -> ! {
     main();
 }
 
+#[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn main() -> ! {
-    let vga_buffer = 0xb8000 as *mut u8;
-
-    for (i, &byte) in HELLO.iter().enumerate() {
-        unsafe {
-            *vga_buffer.offset(i as isize * 2) = byte;
-            *vga_buffer.offset(i as isize * 2 + 1) = 0xb;
-        }
-    }
-
     loop {}
 }
 
 /// macOS does not support statically linked binaries,
 /// so we have to link the libSystem library. The entry point
 /// is called main:
+//#[cfg(not(test))]
 //#[no_mangle]
 //pub extern "C" fn main()-> ! {
 //    loop {
@@ -78,6 +78,7 @@ pub extern "C" fn main() -> ! {
 //}
 
 /// This function is called on panic.
+#[cfg(not(test))]
 #[panic_implementation]
 #[no_mangle]
 pub fn panic(info: &PanicInfo) -> ! {

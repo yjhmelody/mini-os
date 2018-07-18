@@ -4,7 +4,7 @@
 
 ### The VGA Text Buffer
 
-VGA's address is 0xb8000
+VGA's address is 0xb8000.
 
 To print a character to the screen in VGA text mode, one has to write it to the text buffer of the VGA hardware. The VGA text buffer is a two-dimensional array with typically 25 rows and 80 columns, which is directly rendered to the screen. Each array entry describes a single screen character through the following format:
 
@@ -48,7 +48,7 @@ the compiler that the write has side effects and should not be optimized away.
 Right now, we just ignore newlines and characters that don't fit into 
 the line anymore. Instead we want to move every character one line up 
 (the top line gets deleted) and start at the beginning of the last line 
-again. To do this, we add an implementation for the new_line method of Writer
+again. To do this, we add an implementation for the new_line method of Writer.
 
 ## Spinlocks
 To get synchronized interior mutability, users of the standard library 
