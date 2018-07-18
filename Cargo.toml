@@ -4,7 +4,12 @@ version = "0.1.0"
 authors = ["yjhmelody <465402634@qq.com>"]
 
 [dependencies]
+volatile = "0.2"
+spin = "0.4"
 
+[dependencies.lazy_static]
+version = "1.0"
+features = ["spin_no_std"]
 
 # This sets the panic strategy to abort for both the dev profile (used for cargo build)
 # and the release profile (used for cargo build --release).

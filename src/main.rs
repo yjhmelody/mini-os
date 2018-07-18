@@ -2,7 +2,16 @@
 #![no_main]
 #![feature(panic_implementation)]
 
+#[macro_use]
+extern crate lazy_static;
+extern crate volatile;
+extern crate spin;
+
+#[macro_use]
+mod vga_buffer;
+
 use core::panic::PanicInfo;
+
 
 /// The eh_personality language item is used for implementing stack unwinding.
 /// By default, Rust uses unwinding to run the destructors of all live
@@ -29,15 +38,8 @@ static HELLO: &[u8] = b"Hello World!";
 
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    let vga_buffer = 0xb8000 as *mut u8;
-
-    for (i, &byte) in HELLO.iter().enumerate() {
-        unsafe {
-            *vga_buffer.offset(i as isize * 2) = byte;
-            *vga_buffer.offset(i as isize * 2 + 1) = 0xb;
-        }
-    }
-
+    panic!("Some panic");
+    println!("hello os {}", "!");
     loop {}
 }
 
@@ -78,6 +80,7 @@ pub extern "C" fn main() -> ! {
 /// This function is called on panic.
 #[panic_implementation]
 #[no_mangle]
-pub fn panic(_info: &PanicInfo) -> ! {
+pub fn panic(info: &PanicInfo) -> ! {
+    println!("{}", info);
     loop {}
 }
