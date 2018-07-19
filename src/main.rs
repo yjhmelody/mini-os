@@ -1,20 +1,12 @@
 #![no_std]
-//#![no_main]
 #![cfg_attr(not(test), no_main)]
 #![feature(panic_implementation)]
 #![cfg_attr(test, allow(dead_code, unused_macros, unused_imports))]
 
-#[cfg(test)]
-extern crate std;
-#[cfg(test)]
-extern crate array_init;
 #[macro_use]
-extern crate lazy_static;
-extern crate volatile;
-extern crate spin;
+extern crate mini_os;
 
-#[macro_use]
-mod vga_buffer;
+use mini_os::*;
 
 use core::panic::PanicInfo;
 
@@ -39,13 +31,11 @@ use core::panic::PanicInfo;
 /// The linker just looks for a function with that name and sets
 /// this function as entry point the executable. So to overwrite
 /// the entry point, we define our own _start function:
-static HELLO: &[u8] = b"Hello World!";
 
 #[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     println!("hello os {}", "!");
-    panic!("Some panic");
     loop {}
 }
 
@@ -60,22 +50,15 @@ pub extern "C" fn mainCRTStartup() -> ! {
     main();
 }
 
+
+/// macOS does not support statically linked binaries,
+/// so we have to link the libSystem library. The entry point
+/// is called main:
 #[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn main() -> ! {
     loop {}
 }
-
-/// macOS does not support statically linked binaries,
-/// so we have to link the libSystem library. The entry point
-/// is called main:
-//#[cfg(not(test))]
-//#[no_mangle]
-//pub extern "C" fn main()-> ! {
-//    loop {
-//
-//    }
-//}
 
 /// This function is called on panic.
 #[cfg(not(test))]
@@ -85,3 +68,4 @@ pub fn panic(info: &PanicInfo) -> ! {
     println!("{}", info);
     loop {}
 }
+

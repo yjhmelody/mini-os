@@ -6,7 +6,9 @@
 
 VGA's address is 0xb8000.
 
-To print a character to the screen in VGA text mode, one has to write it to the text buffer of the VGA hardware. The VGA text buffer is a two-dimensional array with typically 25 rows and 80 columns, which is directly rendered to the screen. Each array entry describes a single screen character through the following format:
+To print a character to the screen in VGA text mode, one has to write it to the text buffer of the VGA hardware. 
+The VGA text buffer is a two-dimensional array with typically 25 rows and 80 columns, which is directly 
+rendered to the screen. Each array entry describes a single screen character through the following format:
 
 |Bit(s) |Value              |
 | -     | -                 | 
@@ -51,6 +53,7 @@ the line anymore. Instead we want to move every character one line up
 again. To do this, we add an implementation for the new_line method of Writer.
 
 ## Spinlocks
+
 To get synchronized interior mutability, users of the standard library 
 can use Mutex. It provides mutual exclusion by blocking threads when 
 the resource is already locked. But our basic kernel does not have any 
@@ -60,3 +63,33 @@ requires no operating system features: the spinlock. Instead of blocking,
 the threads simply try to lock it again and again in a tight loop and thus burn CPU time until the mutex is free again.
 
 
+## The Serial Port
+
+The naive way of doing an integration test would be to add some assertions in the code, 
+launch QEMU, and manually check if a panic occured or not. This is very cumbersome and 
+not practical if we have hundreds of integration tests. So we want an automated solution 
+that runs all tests and fails if not all of them pass.
+
+Such an automated test framework needs to know whether a test succeeded or failed. 
+It can't look at the screen output of QEMU, so we need a different way of retrieving the test 
+results on the host system. A simple way to achieve this is by using the serial port, 
+an old interface standard which is no longer found in modern computers. It is easy to program 
+and QEMU can redirect the bytes sent over serial to the host's standard output or a file.
+
+The chips implementing a serial interface are called UARTs. There are lots of UART models on x86, 
+but fortunately the only differences between them are some advanced features we don't need. 
+The common UARTs today are all compatible to the 16550 UART, so we will use that model for our testing framework.
+
+## Port I/O
+
+There are two different approaches for communicating between the CPU and peripheral hardware on x86, 
+memory-mapped I/O and port-mapped I/O. We already used memory-mapped I/O for accessing the VGA text buffer 
+through the memory address 0xb8000. This address is not mapped to RAM, but to some memory on the GPU.
+
+In contrast, port-mapped I/O uses a separate I/O bus for communication. Each connected 
+peripheral has one or more port numbers. To communicate with such an I/O port there are 
+special CPU instructions called in and out, which take a port number and a data byte 
+(there are also variations of these commands that allow sending an u16 or u32).
+
+The UART uses port-mapped I/O. Fortunately there are already several crates that provide abstractions 
+for I/O ports and even UARTs, so we don't need to invoke the in and out assembly instructions manually.
