@@ -1,8 +1,6 @@
 # Mini OS notes
 
-## VGA Text Mode
-
-### The VGA Text Buffer
+## The VGA Text Buffer
 
 VGA's address is 0xb8000.
 
@@ -93,3 +91,115 @@ special CPU instructions called in and out, which take a port number and a data 
 
 The UART uses port-mapped I/O. Fortunately there are already several crates that provide abstractions 
 for I/O ports and even UARTs, so we don't need to invoke the in and out assembly instructions manually.
+
+## CPU Exceptions
+
+On x86 there are about 20 different CPU exception types. The most important are:
+
+- Page Fault: A page fault occurs on illegal memory accesses. For example, if the current instruction tries to read from an unmapped page or tries to write to a read-only page.
+- Invalid Opcode: This exception occurs when the current instruction is invalid, for example when we try to use newer SSE instructions on an old CPU that does not support them.
+- General Protection Fault: This is the exception with the broadest range of causes. It occurs on various kinds of access violations such as trying to executing a privileged instruction in user level code or writing reserved fields in configuration registers.
+- Double Fault: When an exception occurs, the CPU tries to call the corresponding handler function. If another exception occurs while calling the exception handler, the CPU raises a double fault exception. This exception also occurs when there is no handler function registered for an exception.
+- Triple Fault: If an exception occurs while the CPU tries to call the double fault handler function, it issues a fatal triple fault. We can't catch or handle a triple fault. Most processors react by resetting themselves and rebooting the operating system.
+
+## The Interrupt Descriptor Table
+
+In order to catch and handle exceptions, we have to set up a so-called Interrupt Descriptor Table (IDT). 
+In this table we can specify a handler function for each CPU exception. The hardware uses this table directly, 
+so we need to follow a predefined format. Each entry must have the following 16-byte structure:
+
+|Type	|Name	|Description
+|-      |-      |-          
+|u16	|Function Pointer [0:15]	|The lower bits of the pointer to the handler function.
+|u16	|GDT selector	|Selector of a code segment in the global descriptor table.
+|u16	|Options	|(see below)
+|u16	|Function Pointer [16:31]	|The middle bits of the pointer to the handler function.
+|u32	|Function Pointer [32:63]	|The remaining bits of the pointer to the handler function.
+|u32	|Reserved|
+
+
+The options field has the following format:
+
+|Bits	|Name	|Description |
+|-      |-                                  |-                              |
+|0-2	|Interrupt Stack Table Index	    |0: Don't switch stacks, 1-7: Switch to the n-th stack in the Interrupt Stack Table when this handler is called.
+|3-7	|Reserved
+|8	    |0: Interrupt Gate, 1: Trap Gate	|If this bit is 0, interrupts are disabled when this handler is called.
+|9-11	|must be one
+|12     |must be zero
+|13‑14  |Descriptor Privilege Level (DPL)	|The minimal privilege level required for calling this handler.
+|15	    |  Present
+
+Each exception has a predefined IDT index. For example the invalid opcode exception has table index 6 and 
+the page fault exception has table index 14. Thus, the hardware can automatically load the 
+corresponding IDT entry for each exception. The Exception Table in the OSDev wiki shows the IDT 
+indexes of all exceptions in the “Vector nr.” column.
+
+When an exception occurs, the CPU roughly does the following:
+
+- Push some registers on the stack, including the instruction pointer and the RFLAGS register. (We will use these values later in this post.)
+- Read the corresponding entry from the Interrupt Descriptor Table (IDT). For example, the CPU reads the 14-th entry when a page fault occurs.
+- Check if the entry is present. Raise a double fault if not.
+- Disable hardware interrupts if the entry is an interrupt gate (bit 40 not set).
+- Load the specified GDT selector into the CS segment.
+- Jump to the specified handler function.
+
+## The Interrupt Calling Convention
+
+Calling conventions specify the details of a function call. For example, they specify where 
+function parameters are placed (e.g. in registers or on the stack) and how results are returned. 
+On x86_64 Linux, the following rules apply for C functions (specified in the System V ABI):
+
+- the first six integer arguments are passed in registers rdi, rsi, rdx, rcx, r8, r9
+- additional arguments are passed on the stack
+- results are returned in rax and rdx
+
+Note that Rust does not follow the C ABI (in fact, there isn't even a Rust ABI yet), 
+so these rules apply only to functions declared as extern "C" fn.
+
+## Preserved and Scratch Registers
+
+The calling convention divides the registers in two parts: preserved and scratch registers.
+
+The values of preserved registers must remain unchanged across function calls. So a called function 
+(the “callee”) is only allowed to overwrite these registers if it restores their original values before returning. 
+Therefore these registers are called “callee-saved”. A common pattern is to save these registers to the stack 
+at the function's beginning and restore them just before returning.
+
+In contrast, a called function is allowed to overwrite scratch registers without restrictions. 
+If the caller wants to preserve the value of a scratch register across a function call, it needs to 
+backup and restore it before the function call (e.g. by pushing it to the stack). So the scratch 
+registers are caller-saved.
+
+On x86_64, the C calling convention specifies the following preserved and scratch registers:
+
+|preserved registers	            |scratch registers                              |
+|-                                  |-                                              |      
+|rbp, rbx, rsp, r12, r13, r14, r15  |rax, rcx, rdx, rsi, rdi, r8, r9, r10, r11      |
+|callee-saved	                    |caller-saved                                   |
+
+The compiler knows these rules, so it generates the code accordingly.
+
+Since we don't know when an exception occurs, we can't backup any registers before. 
+This means that we can't use a calling convention that relies on caller-saved registers for 
+exception handlers. Instead, we need a calling convention means that preserves all registers. 
+The x86-interrupt calling convention is such a calling convention, so it guarantees that 
+all register values are restored to their original values on function return.
+
+## The Exception Stack Frame
+
+For exception and interrupt handlers, however, pushing a return address would not suffice, 
+since interrupt handlers often run in a different context (stack pointer, CPU flags, etc.). 
+Instead, the CPU performs the following steps when an interrupt occurs:
+
+## Behind the Scenes
+
+## BreakPoint Exception
+
+The breakpoint exception is commonly used in debuggers: When the user sets a breakpoint, 
+the debugger overwrites the corresponding instruction with the int3 instruction so that 
+the CPU throws the breakpoint exception when it reaches that line. When the user wants to 
+continue the program, the debugger replaces the int3 instruction with the original instruction 
+again and continues the program. 
+
+

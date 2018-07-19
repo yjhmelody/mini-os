@@ -2,13 +2,18 @@
 #![cfg_attr(not(test), no_main)]
 #![feature(panic_implementation)]
 #![cfg_attr(test, allow(dead_code, unused_macros, unused_imports))]
+#![feature(abi_x86_interrupt)]
 
 #[macro_use]
 extern crate mini_os;
-
-use mini_os::*;
+extern crate x86_64;
+#[macro_use]
+extern crate lazy_static;
 
 use core::panic::PanicInfo;
+use mini_os::*;
+use x86_64::structures::idt::InterruptDescriptorTable;
+use x86_64::structures::idt::ExceptionStackFrame;
 
 /// The eh_personality language item is used for implementing stack unwinding.
 /// By default, Rust uses unwinding to run the destructors of all live
@@ -36,6 +41,10 @@ use core::panic::PanicInfo;
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     println!("hello os {}", "!");
+
+    init_idt();
+    // invoke a breakpoint exception
+    x86_64::instructions::int3();
     loop {}
 }
 
@@ -69,3 +78,18 @@ pub fn panic(info: &PanicInfo) -> ! {
     loop {}
 }
 
+lazy_static! {
+    static ref IDT: InterruptDescriptorTable = {
+        let mut idt = InterruptDescriptorTable::new();
+        idt.breakpoint.set_handler_fn(breakpoint_handler);
+        idt
+    };
+}
+
+pub fn init_idt() {
+    IDT.load();
+}
+
+extern "x86-interrupt" fn breakpoint_handler(stack_frame: &mut ExceptionStackFrame) {
+    println!("EXCEPTION: BREAKPOINT\n{:#?}", stack_frame);
+}

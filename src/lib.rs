@@ -1,4 +1,5 @@
 #![no_std]
+#![feature(panic_implementation)]
 
 #[cfg(test)]
 extern crate std;
