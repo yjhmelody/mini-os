@@ -16,6 +16,7 @@ extern crate x86_64;
 pub mod vga_buffer;
 #[macro_use]
 pub mod serial;
+pub mod gdt;
 
 pub unsafe fn exit_qemu() {
     use x86_64::instructions::port::Port;
@@ -24,3 +25,4 @@ pub unsafe fn exit_qemu() {
     // As value we write a zero, which causes QEMU to exit with exit status (0 << 1) | 1 = 1.
     port.write(0);
 }
+

@@ -11,9 +11,8 @@ extern crate x86_64;
 extern crate lazy_static;
 #[macro_use]
 extern crate bootloader_precompiled;
-
-#[cfg(not(test))]
-entry_point!(kernel_main);
+#[macro_use]
+extern crate bootloader;
 
 use core::panic::PanicInfo;
 use mini_os::*;
@@ -52,6 +51,8 @@ use x86_64::structures::idt::ExceptionStackFrame;
 //    x86_64::instructions::int3();
 //    loop {}
 //}
+#[cfg(not(test))]
+entry_point!(kernel_main);
 
 #[cfg(not(test))]
 #[no_mangle]
@@ -60,7 +61,19 @@ fn kernel_main(boot_info: &'static bootloader_precompiled::bootinfo::BootInfo) -
 
     init_idt();
     // invoke a breakpoint exception
-    x86_64::instructions::int3();
+//     x86_64::instructions::int3();
+
+    // cause a double fault
+//    unsafe {
+//        *(0xdeadbeaf as *mut u64) = 42;
+//    }
+//
+    // trigger a stack overflow
+//    fn stack_overflow(){stack_overflow();};
+//    stack_overflow();
+
+
+    println!("It did not crash!");
     loop {}
 }
 
@@ -98,6 +111,7 @@ lazy_static! {
     static ref IDT: InterruptDescriptorTable = {
         let mut idt = InterruptDescriptorTable::new();
         idt.breakpoint.set_handler_fn(breakpoint_handler);
+        idt.double_fault.set_handler_fn(double_fault_handler);
         idt
     };
 }
@@ -108,4 +122,11 @@ pub fn init_idt() {
 
 extern "x86-interrupt" fn breakpoint_handler(stack_frame: &mut ExceptionStackFrame) {
     println!("EXCEPTION: BREAKPOINT\n{:#?}", stack_frame);
+}
+
+// deal with double fault
+extern "x86-interrupt" fn double_fault_handler(stack_frame: &mut ExceptionStackFrame, _error_code: u64)
+{
+    println!("EXCEPTION: DOUBLE FAULT\n{:#?}", stack_frame);
+    loop {}
 }

@@ -211,3 +211,52 @@ to catch-all blocks in programming languages with exceptions, e.g. catch(...) in
 catch(Exception e) in Java or C#.
 
 
+## Causes of Double Faults
+
+|First Exception    |   Second Exception|
+|-                  |-                  |
+|Divide-by-zero, Invalid TSS, Segment Not Present, Stack-Segment Fault, General Protection Fault    | Invalid TSS, Segment Not Present, Stack-Segment Fault, General Protection Fault
+|Page Fault	        |Page Fault, Invalid TSS, Segment Not Present, Stack-Segment Fault, General Protection Fault
+
+
+## Switching Stacks
+
+The x86_64 architecture is able to switch to a predefined, known-good stack when an exception occurs. 
+This switch happens at hardware level, so it can be performed before the CPU pushes the exception stack frame.
+The switching mechanism is implemented as an Interrupt Stack Table (IST). 
+The IST is a table of 7 pointers to known-good stacks.
+
+## The IST and TSS
+
+The Interrupt Stack Table (IST) is part of an old legacy structure called Task State Segment (TSS). 
+The TSS used to hold various information (e.g. processor register state) about a task in 32-bit mode 
+and was for example used for hardware context switching. However, hardware context switching is no longer 
+supported in 64-bit mode and the format of the TSS changed completely.
+
+On x86_64, the TSS no longer holds any task specific information at all. Instead, 
+it holds two stack tables (the IST is one of them). The only common field between the 32-bit 
+and 64-bit TSS is the pointer to the I/O port permissions bitmap.
+
+he 64-bit TSS has the following format:
+
+|Field                  |Type
+|-                      |-|
+|(reserved)	            |u32
+|Privilege Stack Table	|[u64; 3]
+|(reserved)	            |u64
+|Interrupt Stack Table	|[u64; 7]
+|(reserved)	            |u64
+|(reserved)	            |u16
+|I/O Map Base Address	|u16
+
+
+## The Global Descriptor Table
+
+The Global Descriptor Table (GDT) is a relict that was used for memory segmentation before paging became the de facto standard. 
+It is still needed in 64-bit mode for various things such as kernel/user mode configuration or TSS loading.
+
+The GDT is a structure that contains the segments of the program. 
+It was used on older architectures to isolate programs from each other, before paging became the standard.
+While segmentation is no longer supported in 64-bit mode, the GDT still exists. 
+It is mostly used for two things: Switching between kernel space and user space, and loading a TSS structure.
+
