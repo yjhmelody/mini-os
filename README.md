@@ -202,4 +202,12 @@ the CPU throws the breakpoint exception when it reaches that line. When the user
 continue the program, the debugger replaces the int3 instruction with the original instruction 
 again and continues the program. 
 
+## Double Fault
+
+In simplified terms, a double fault is a special exception that occurs when the CPU fails to 
+invoke an exception handler. For example, it occurs when a page fault is triggered but there is 
+no page fault handler registered in the Interrupt Descriptor Table (IDT). So it's kind of similar 
+to catch-all blocks in programming languages with exceptions, e.g. catch(...) in C++ or 
+catch(Exception e) in Java or C#.
+
 

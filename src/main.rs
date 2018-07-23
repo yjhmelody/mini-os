@@ -9,6 +9,11 @@ extern crate mini_os;
 extern crate x86_64;
 #[macro_use]
 extern crate lazy_static;
+#[macro_use]
+extern crate bootloader_precompiled;
+
+#[cfg(not(test))]
+entry_point!(kernel_main);
 
 use core::panic::PanicInfo;
 use mini_os::*;
@@ -37,9 +42,20 @@ use x86_64::structures::idt::ExceptionStackFrame;
 /// this function as entry point the executable. So to overwrite
 /// the entry point, we define our own _start function:
 
+//#[cfg(not(test))]
+//#[no_mangle]
+//pub extern "C" fn _start() -> ! {
+//    println!("hello os {}", "!");
+//
+//    init_idt();
+//    // invoke a breakpoint exception
+//    x86_64::instructions::int3();
+//    loop {}
+//}
+
 #[cfg(not(test))]
 #[no_mangle]
-pub extern "C" fn _start() -> ! {
+fn kernel_main(boot_info: &'static bootloader_precompiled::bootinfo::BootInfo) -> ! {
     println!("hello os {}", "!");
 
     init_idt();

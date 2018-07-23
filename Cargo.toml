@@ -11,6 +11,8 @@ volatile = "0.2"
 spin = "0.4"
 uart_16550 = "0.1.0"
 x86_64 = "0.2"
+bootloader = "0.2" # only works on linux
+bootloader_precompiled = "0.2"
 
 [dependencies.lazy_static]
 version = "1.0"

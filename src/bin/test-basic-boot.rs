@@ -5,6 +5,8 @@
 
 #[macro_use]
 extern crate mini_os;
+#[macro_use]
+extern crate bootloader_precompiled;
 
 use mini_os::*;
 
@@ -12,9 +14,18 @@ use core::panic::PanicInfo;
 
 /// This function is the entry point, since the linker looks for a function
 /// named `_start` by default.
+//#[cfg(not(test))]
+//#[no_mangle]
+//pub extern "C" fn _start() -> ! {
+//    println!("hello os {}", "!");
+//    serial_println!("ok");
+//    unsafe { exit_qemu(); }
+//    loop {}
+//}
+
 #[cfg(not(test))]
 #[no_mangle]
-pub extern "C" fn _start() -> ! {
+fn kernel_main(boot_info: &'static bootloader_precompiled::bootinfo::BootInfo) -> ! {
     println!("hello os {}", "!");
     serial_println!("ok");
     unsafe { exit_qemu(); }
