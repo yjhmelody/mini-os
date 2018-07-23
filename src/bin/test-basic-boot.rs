@@ -6,7 +6,7 @@
 #[macro_use]
 extern crate mini_os;
 #[macro_use]
-extern crate bootloader_precompiled;
+extern crate bootloader;
 
 use mini_os::*;
 
@@ -22,10 +22,12 @@ use core::panic::PanicInfo;
 //    unsafe { exit_qemu(); }
 //    loop {}
 //}
+#[cfg(not(test))]
+entry_point!(kernel_main);
 
 #[cfg(not(test))]
 #[no_mangle]
-fn kernel_main(boot_info: &'static bootloader_precompiled::bootinfo::BootInfo) -> ! {
+fn kernel_main(boot_info: &'static bootloader::bootinfo::BootInfo) -> ! {
     println!("hello os {}", "!");
     serial_println!("ok");
     unsafe { exit_qemu(); }
